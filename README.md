@@ -42,11 +42,19 @@ wrangler secret put COOKIE_ENCRYPTION_KEY # add any random string here e.g. open
 > [!IMPORTANT]
 > When you create the first secret, Wrangler will ask if you want to create a new Worker. Submit "Y" to create a new Worker and save the secret.
 
-#### Set up a KV namespace
+#### Set up Wrangler config
 
-- Create the KV namespace:
-  `wrangler kv namespace create "OAUTH_KV"`
-- Update the Wrangler file with the KV ID
+Copy the example config and fill in your KV namespace ID:
+
+```bash
+cp wrangler.jsonc.example wrangler.jsonc
+```
+
+Create the KV namespace and update `wrangler.jsonc` with the returned ID:
+
+```bash
+wrangler kv namespace create "OAUTH_KV"
+```
 
 #### Deploy & Test
 
