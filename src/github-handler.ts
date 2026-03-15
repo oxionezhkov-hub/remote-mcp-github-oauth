@@ -1,8 +1,15 @@
 import { env } from "cloudflare:workers";
-import type { AuthRequest, OAuthHelpers } from "@cloudflare/workers-oauth-provider";
+import type {
+	AuthRequest,
+	OAuthHelpers,
+} from "@cloudflare/workers-oauth-provider";
 import { Hono } from "hono";
 import { Octokit } from "octokit";
-import { fetchUpstreamAuthToken, getUpstreamAuthorizeUrl, type Props } from "./utils";
+import {
+	fetchUpstreamAuthToken,
+	getUpstreamAuthorizeUrl,
+	type Props,
+} from "./utils";
 import {
 	addApprovedClient,
 	bindStateToSession,
@@ -28,8 +35,11 @@ app.get("/authorize", async (c) => {
 	if (await isClientApproved(c.req.raw, clientId, env.COOKIE_ENCRYPTION_KEY)) {
 		// Skip approval dialog but still create secure state and bind to session
 		const { stateToken } = await createOAuthState(oauthReqInfo, c.env.OAUTH_KV);
-		const { setCookie: sessionBindingCookie } = await bindStateToSession(stateToken);
-		return redirectToGithub(c.req.raw, stateToken, { "Set-Cookie": sessionBindingCookie });
+		const { setCookie: sessionBindingCookie } =
+			await bindStateToSession(stateToken);
+		return redirectToGithub(c.req.raw, stateToken, {
+			"Set-Cookie": sessionBindingCookie,
+		});
 	}
 
 	// Generate CSRF protection for the approval form
@@ -39,7 +49,8 @@ app.get("/authorize", async (c) => {
 		client: await c.env.OAUTH_PROVIDER.lookupClient(clientId),
 		csrfToken,
 		server: {
-			description: "This is a demo MCP Remote Server using GitHub for authentication.",
+			description:
+				"This is a demo MCP Remote Server using GitHub for authentication.",
 			logo: "https://avatars.githubusercontent.com/u/314135?s=200&v=4",
 			name: "Cloudflare GitHub MCP Server",
 		},
@@ -81,8 +92,12 @@ app.post("/authorize", async (c) => {
 		);
 
 		// Create OAuth state and bind it to this user's session
-		const { stateToken } = await createOAuthState(state.oauthReqInfo, c.env.OAUTH_KV);
-		const { setCookie: sessionBindingCookie } = await bindStateToSession(stateToken);
+		const { stateToken } = await createOAuthState(
+			state.oauthReqInfo,
+			c.env.OAUTH_KV,
+		);
+		const { setCookie: sessionBindingCookie } =
+			await bindStateToSession(stateToken);
 
 		// Set both cookies: approved client list + session binding
 		const headers = new Headers();
@@ -90,13 +105,14 @@ app.post("/authorize", async (c) => {
 		headers.append("Set-Cookie", sessionBindingCookie);
 
 		return redirectToGithub(c.req.raw, stateToken, Object.fromEntries(headers));
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("POST /authorize error:", error);
 		if (error instanceof OAuthError) {
 			return error.toResponse();
 		}
 		// Unexpected non-OAuth error
-		return c.text(`Internal server error: ${error.message}`, 500);
+		const message = error instanceof Error ? error.message : "Unknown error";
+		return c.text(`Internal server error: ${message}`, 500);
 	}
 });
 
@@ -146,7 +162,7 @@ app.get("/callback", async (c) => {
 		const result = await validateOAuthState(c.req.raw, c.env.OAUTH_KV);
 		oauthReqInfo = result.oauthReqInfo;
 		clearSessionCookie = result.clearCookie;
-	} catch (error: any) {
+	} catch (error: unknown) {
 		if (error instanceof OAuthError) {
 			return error.toResponse();
 		}
@@ -169,7 +185,9 @@ app.get("/callback", async (c) => {
 	if (errResponse) return errResponse;
 
 	// Fetch the user info from GitHub
-	const user = await new Octokit({ auth: accessToken }).rest.users.getAuthenticated();
+	const user = await new Octokit({
+		auth: accessToken,
+	}).rest.users.getAuthenticated();
 	const { login, name, email } = user.data;
 
 	// Return back to the MCP client a new token

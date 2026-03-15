@@ -19,20 +19,28 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 	});
 
 	async init() {
-		const token = this.props!.accessToken;
+		const token = this.props?.accessToken;
+		if (!token) {
+			throw new Error("accessToken is not available");
+		}
 
 		// --- Repository tools ---
 
-		this.server.tool(
+		this.server.registerTool(
 			"list_repos",
-			"List repositories for the authenticated user",
 			{
-				sort: z
-					.enum(["created", "updated", "pushed", "full_name"])
-					.optional()
-					.describe("Sort field"),
-				per_page: z.number().optional().describe("Results per page (max 100)"),
-				page: z.number().optional().describe("Page number"),
+				description: "List repositories for the authenticated user",
+				inputSchema: {
+					sort: z
+						.enum(["created", "updated", "pushed", "full_name"])
+						.optional()
+						.describe("Sort field"),
+					per_page: z
+						.number()
+						.optional()
+						.describe("Results per page (max 100)"),
+					page: z.number().optional().describe("Page number"),
+				},
 			},
 			async ({ sort, per_page, page }) => {
 				const params = new URLSearchParams();
@@ -40,38 +48,52 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 				if (per_page) params.set("per_page", String(per_page));
 				if (page) params.set("page", String(page));
 				const query = params.toString();
-				const res = await githubRequest(`/user/repos${query ? `?${query}` : ""}`, token);
+				const res = await githubRequest(
+					`/user/repos${query ? `?${query}` : ""}`,
+					token,
+				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"get_repo",
-			"Get details of a repository",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
+				description: "Get details of a repository",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+				},
 			},
 			async ({ owner, repo }) => {
 				const res = await githubRequest(`/repos/${owner}/${repo}`, token);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"search_repos",
-			"Search repositories",
 			{
-				q: z.string().describe("Search query"),
-				sort: z
-					.enum(["stars", "forks", "help-wanted-issues", "updated"])
-					.optional()
-					.describe("Sort field"),
-				order: z.enum(["asc", "desc"]).optional().describe("Sort order"),
-				per_page: z.number().optional().describe("Results per page (max 100)"),
-				page: z.number().optional().describe("Page number"),
+				description: "Search repositories",
+				inputSchema: {
+					q: z.string().describe("Search query"),
+					sort: z
+						.enum(["stars", "forks", "help-wanted-issues", "updated"])
+						.optional()
+						.describe("Sort field"),
+					order: z.enum(["asc", "desc"]).optional().describe("Sort order"),
+					per_page: z
+						.number()
+						.optional()
+						.describe("Results per page (max 100)"),
+					page: z.number().optional().describe("Page number"),
+				},
 			},
 			async ({ q, sort, order, per_page, page }) => {
 				const params = new URLSearchParams({ q });
@@ -79,28 +101,44 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 				if (order) params.set("order", order);
 				if (per_page) params.set("per_page", String(per_page));
 				if (page) params.set("page", String(page));
-				const res = await githubRequest(`/search/repositories?${params}`, token);
+				const res = await githubRequest(
+					`/search/repositories?${params}`,
+					token,
+				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
 		// --- Issue tools ---
 
-		this.server.tool(
+		this.server.registerTool(
 			"list_issues",
-			"List issues for a repository",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				state: z.enum(["open", "closed", "all"]).optional().describe("Issue state filter"),
-				sort: z
-					.enum(["created", "updated", "comments"])
-					.optional()
-					.describe("Sort field"),
-				direction: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
-				per_page: z.number().optional().describe("Results per page (max 100)"),
-				page: z.number().optional().describe("Page number"),
+				description: "List issues for a repository",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					state: z
+						.enum(["open", "closed", "all"])
+						.optional()
+						.describe("Issue state filter"),
+					sort: z
+						.enum(["created", "updated", "comments"])
+						.optional()
+						.describe("Sort field"),
+					direction: z
+						.enum(["asc", "desc"])
+						.optional()
+						.describe("Sort direction"),
+					per_page: z
+						.number()
+						.optional()
+						.describe("Results per page (max 100)"),
+					page: z.number().optional().describe("Page number"),
+				},
 			},
 			async ({ owner, repo, state, sort, direction, per_page, page }) => {
 				const params = new URLSearchParams();
@@ -115,17 +153,21 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					token,
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"get_issue",
-			"Get details of a specific issue",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				issue_number: z.number().describe("Issue number"),
+				description: "Get details of a specific issue",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					issue_number: z.number().describe("Issue number"),
+				},
 			},
 			async ({ owner, repo, issue_number }) => {
 				const res = await githubRequest(
@@ -133,39 +175,54 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					token,
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"create_issue",
-			"Create a new issue",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				title: z.string().describe("Issue title"),
-				body: z.string().optional().describe("Issue body"),
-				labels: z.array(z.string()).optional().describe("Labels to add"),
-				assignees: z.array(z.string()).optional().describe("Usernames to assign"),
+				description: "Create a new issue",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					title: z.string().describe("Issue title"),
+					body: z.string().optional().describe("Issue body"),
+					labels: z.array(z.string()).optional().describe("Labels to add"),
+					assignees: z
+						.array(z.string())
+						.optional()
+						.describe("Usernames to assign"),
+				},
 			},
 			async ({ owner, repo, title, body, labels, assignees }) => {
-				const res = await githubRequest(`/repos/${owner}/${repo}/issues`, token, {
-					method: "POST",
-					body: { title, body, labels, assignees },
-				});
+				const res = await githubRequest(
+					`/repos/${owner}/${repo}/issues`,
+					token,
+					{
+						method: "POST",
+						body: { title, body, labels, assignees },
+					},
+				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"create_issue_comment",
-			"Add a comment to an issue",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				issue_number: z.number().describe("Issue number"),
-				body: z.string().describe("Comment body"),
+				description: "Add a comment to an issue",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					issue_number: z.number().describe("Issue number"),
+					body: z.string().describe("Comment body"),
+				},
 			},
 			async ({ owner, repo, issue_number, body }) => {
 				const res = await githubRequest(
@@ -174,28 +231,49 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					{ method: "POST", body: { body } },
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"update_issue",
-			"Update an issue (close, reopen, edit title/body, change labels/assignees)",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				issue_number: z.number().describe("Issue number"),
-				title: z.string().optional().describe("New title"),
-				body: z.string().optional().describe("New body"),
-				state: z.enum(["open", "closed"]).optional().describe("State to set"),
-				state_reason: z
-					.enum(["completed", "not_planned", "reopened"])
-					.optional()
-					.describe("Reason for state change (use with state)"),
-				labels: z.array(z.string()).optional().describe("Labels to set (replaces all)"),
-				assignees: z.array(z.string()).optional().describe("Assignees to set (replaces all)"),
+				description:
+					"Update an issue (close, reopen, edit title/body, change labels/assignees)",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					issue_number: z.number().describe("Issue number"),
+					title: z.string().optional().describe("New title"),
+					body: z.string().optional().describe("New body"),
+					state: z.enum(["open", "closed"]).optional().describe("State to set"),
+					state_reason: z
+						.enum(["completed", "not_planned", "reopened"])
+						.optional()
+						.describe("Reason for state change (use with state)"),
+					labels: z
+						.array(z.string())
+						.optional()
+						.describe("Labels to set (replaces all)"),
+					assignees: z
+						.array(z.string())
+						.optional()
+						.describe("Assignees to set (replaces all)"),
+				},
 			},
-			async ({ owner, repo, issue_number, title, body, state, state_reason, labels, assignees }) => {
+			async ({
+				owner,
+				repo,
+				issue_number,
+				title,
+				body,
+				state,
+				state_reason,
+				labels,
+				assignees,
+			}) => {
 				const payload: Record<string, unknown> = {};
 				if (title !== undefined) payload.title = title;
 				if (body !== undefined) payload.body = body;
@@ -209,19 +287,26 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					{ method: "PATCH", body: payload },
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"list_issue_comments",
-			"List comments on an issue",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				issue_number: z.number().describe("Issue number"),
-				per_page: z.number().optional().describe("Results per page (max 100)"),
-				page: z.number().optional().describe("Page number"),
+				description: "List comments on an issue",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					issue_number: z.number().describe("Issue number"),
+					per_page: z
+						.number()
+						.optional()
+						.describe("Results per page (max 100)"),
+					page: z.number().optional().describe("Page number"),
+				},
 			},
 			async ({ owner, repo, issue_number, per_page, page }) => {
 				const params = new URLSearchParams();
@@ -233,22 +318,43 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					token,
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"search_issues",
-			"Search issues and pull requests across repositories",
 			{
-				q: z.string().describe("Search query (e.g. 'bug repo:owner/repo is:open')"),
-				sort: z
-					.enum(["comments", "reactions", "reactions-+1", "reactions--1", "reactions-smile", "reactions-thinking_face", "reactions-heart", "reactions-tada", "interactions", "created", "updated"])
-					.optional()
-					.describe("Sort field"),
-				order: z.enum(["asc", "desc"]).optional().describe("Sort order"),
-				per_page: z.number().optional().describe("Results per page (max 100)"),
-				page: z.number().optional().describe("Page number"),
+				description: "Search issues and pull requests across repositories",
+				inputSchema: {
+					q: z
+						.string()
+						.describe("Search query (e.g. 'bug repo:owner/repo is:open')"),
+					sort: z
+						.enum([
+							"comments",
+							"reactions",
+							"reactions-+1",
+							"reactions--1",
+							"reactions-smile",
+							"reactions-thinking_face",
+							"reactions-heart",
+							"reactions-tada",
+							"interactions",
+							"created",
+							"updated",
+						])
+						.optional()
+						.describe("Sort field"),
+					order: z.enum(["asc", "desc"]).optional().describe("Sort order"),
+					per_page: z
+						.number()
+						.optional()
+						.describe("Results per page (max 100)"),
+					page: z.number().optional().describe("Page number"),
+				},
 			},
 			async ({ q, sort, order, per_page, page }) => {
 				const params = new URLSearchParams({ q });
@@ -258,26 +364,39 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 				if (page) params.set("page", String(page));
 				const res = await githubRequest(`/search/issues?${params}`, token);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
 		// --- Pull Request tools ---
 
-		this.server.tool(
+		this.server.registerTool(
 			"list_pull_requests",
-			"List pull requests for a repository",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				state: z.enum(["open", "closed", "all"]).optional().describe("PR state filter"),
-				sort: z
-					.enum(["created", "updated", "popularity", "long-running"])
-					.optional()
-					.describe("Sort field"),
-				direction: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
-				per_page: z.number().optional().describe("Results per page (max 100)"),
-				page: z.number().optional().describe("Page number"),
+				description: "List pull requests for a repository",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					state: z
+						.enum(["open", "closed", "all"])
+						.optional()
+						.describe("PR state filter"),
+					sort: z
+						.enum(["created", "updated", "popularity", "long-running"])
+						.optional()
+						.describe("Sort field"),
+					direction: z
+						.enum(["asc", "desc"])
+						.optional()
+						.describe("Sort direction"),
+					per_page: z
+						.number()
+						.optional()
+						.describe("Results per page (max 100)"),
+					page: z.number().optional().describe("Page number"),
+				},
 			},
 			async ({ owner, repo, state, sort, direction, per_page, page }) => {
 				const params = new URLSearchParams();
@@ -292,17 +411,21 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					token,
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"get_pull_request",
-			"Get details of a specific pull request",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				pull_number: z.number().describe("Pull request number"),
+				description: "Get details of a specific pull request",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					pull_number: z.number().describe("Pull request number"),
+				},
 			},
 			async ({ owner, repo, pull_number }) => {
 				const res = await githubRequest(
@@ -310,17 +433,21 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					token,
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"get_pull_request_diff",
-			"Get the diff of a pull request",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				pull_number: z.number().describe("Pull request number"),
+				description: "Get the diff of a pull request",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					pull_number: z.number().describe("Pull request number"),
+				},
 			},
 			async ({ owner, repo, pull_number }) => {
 				const res = await githubRequest(
@@ -333,34 +460,64 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"create_pull_request_review",
-			"Create a review on a pull request",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				pull_number: z.number().describe("Pull request number"),
-				body: z.string().optional().describe("Review body"),
-				event: z
-					.enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"])
-					.describe("Review action"),
-				commit_id: z.string().optional().describe("SHA of the commit to review (defaults to latest)"),
-				comments: z
-					.array(
-						z.object({
-							path: z.string().describe("Relative file path to comment on"),
-							position: z.number().optional().describe("Line position in the diff (deprecated, use line instead)"),
-							line: z.number().optional().describe("Line number in the file to comment on"),
-							side: z.enum(["LEFT", "RIGHT"]).optional().describe("Side of the diff (LEFT or RIGHT)"),
-							start_line: z.number().optional().describe("Start line for multi-line comment"),
-							start_side: z.enum(["LEFT", "RIGHT"]).optional().describe("Start side for multi-line comment"),
-							body: z.string().describe("Comment body"),
-						}),
-					)
-					.optional()
-					.describe("Inline review comments"),
+				description: "Create a review on a pull request",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					pull_number: z.number().describe("Pull request number"),
+					body: z.string().optional().describe("Review body"),
+					event: z
+						.enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"])
+						.describe("Review action"),
+					commit_id: z
+						.string()
+						.optional()
+						.describe("SHA of the commit to review (defaults to latest)"),
+					comments: z
+						.array(
+							z.object({
+								path: z.string().describe("Relative file path to comment on"),
+								position: z
+									.number()
+									.optional()
+									.describe(
+										"Line position in the diff (deprecated, use line instead)",
+									),
+								line: z
+									.number()
+									.optional()
+									.describe("Line number in the file to comment on"),
+								side: z
+									.enum(["LEFT", "RIGHT"])
+									.optional()
+									.describe("Side of the diff (LEFT or RIGHT)"),
+								start_line: z
+									.number()
+									.optional()
+									.describe("Start line for multi-line comment"),
+								start_side: z
+									.enum(["LEFT", "RIGHT"])
+									.optional()
+									.describe("Start side for multi-line comment"),
+								body: z.string().describe("Comment body"),
+							}),
+						)
+						.optional()
+						.describe("Inline review comments"),
+				},
 			},
-			async ({ owner, repo, pull_number, body, event, commit_id, comments }) => {
+			async ({
+				owner,
+				repo,
+				pull_number,
+				body,
+				event,
+				commit_id,
+				comments,
+			}) => {
 				const payload: Record<string, unknown> = { event };
 				if (body !== undefined) payload.body = body;
 				if (commit_id !== undefined) payload.commit_id = commit_id;
@@ -371,20 +528,24 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					{ method: "POST", body: payload },
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
 		// --- File tools ---
 
-		this.server.tool(
+		this.server.registerTool(
 			"get_file_contents",
-			"Get the contents of a file or directory in a repository",
 			{
-				owner: z.string().describe("Repository owner"),
-				repo: z.string().describe("Repository name"),
-				path: z.string().describe("File or directory path"),
-				ref: z.string().optional().describe("Git ref (branch, tag, or SHA)"),
+				description: "Get the contents of a file or directory in a repository",
+				inputSchema: {
+					owner: z.string().describe("Repository owner"),
+					repo: z.string().describe("Repository name"),
+					path: z.string().describe("File or directory path"),
+					ref: z.string().optional().describe("Git ref (branch, tag, or SHA)"),
+				},
 			},
 			async ({ owner, repo, path, ref }) => {
 				const params = new URLSearchParams();
@@ -395,17 +556,28 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					token,
 				);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 
-		this.server.tool(
+		this.server.registerTool(
 			"search_code",
-			"Search for code across GitHub repositories",
 			{
-				q: z.string().describe("Search query (e.g. 'addClass in:file language:js repo:owner/repo')"),
-				per_page: z.number().optional().describe("Results per page (max 100)"),
-				page: z.number().optional().describe("Page number"),
+				description: "Search for code across GitHub repositories",
+				inputSchema: {
+					q: z
+						.string()
+						.describe(
+							"Search query (e.g. 'addClass in:file language:js repo:owner/repo')",
+						),
+					per_page: z
+						.number()
+						.optional()
+						.describe("Results per page (max 100)"),
+					page: z.number().optional().describe("Page number"),
+				},
 			},
 			async ({ q, per_page, page }) => {
 				const params = new URLSearchParams({ q });
@@ -413,20 +585,25 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 				if (page) params.set("page", String(page));
 				const res = await githubRequest(`/search/code?${params}`, token);
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 		// --- GraphQL tool ---
 
-		this.server.tool(
+		this.server.registerTool(
 			"graphql",
-			"Execute a GitHub GraphQL API query. Use this as a fallback when no other specialized tool can fulfill the request. Supports all GitHub API features including Projects, Discussions, Sponsors, and any other GitHub data.",
 			{
-				query: z.string().describe("GraphQL query string"),
-				variables: z
-					.record(z.string(), z.unknown())
-					.optional()
-					.describe("GraphQL variables as a JSON object"),
+				description:
+					"Execute a GitHub GraphQL API query. Use this as a fallback when no other specialized tool can fulfill the request. Supports all GitHub API features including Projects, Discussions, Sponsors, and any other GitHub data.",
+				inputSchema: {
+					query: z.string().describe("GraphQL query string"),
+					variables: z
+						.record(z.string(), z.unknown())
+						.optional()
+						.describe("GraphQL variables as a JSON object"),
+				},
 			},
 			async ({ query, variables }) => {
 				const res = await githubRequest("/graphql", token, {
@@ -434,7 +611,9 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, Props> {
 					body: { query, variables },
 				});
 				const data = await res.json();
-				return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+				return {
+					content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+				};
 			},
 		);
 	}
@@ -445,6 +624,6 @@ export default new OAuthProvider({
 	apiRoute: "/mcp",
 	authorizeEndpoint: "/authorize",
 	clientRegistrationEndpoint: "/register",
-	defaultHandler: GitHubHandler as any,
+	defaultHandler: GitHubHandler as unknown as ExportedHandler,
 	tokenEndpoint: "/token",
 });
