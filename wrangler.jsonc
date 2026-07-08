@@ -1,0 +1,38 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "remote-mcp-github-oauth",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-03-10",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"migrations": [
+		{
+			"new_sqlite_classes": [
+				"MyMCP"
+			],
+			"tag": "v1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "MyMCP",
+				"name": "MCP_OBJECT"
+			}
+		]
+	},
+	"kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "a8be6f627c154ef3b9a9b1ddba682b6b",
+    }
+  ],
+	"observability": {
+		"enabled": true
+	},
+	"dev": {
+		"port": 8788
+	}
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+}
